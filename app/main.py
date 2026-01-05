@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 from opencensus.ext.fastapi.fastapi_middleware import FastAPIMiddleware
-
+from contextlib import asynccontextmanager
 # 1. Définition du schéma de données (Entrée de l'IA)
 class CustomerData(BaseModel):
     CreditScore: int
@@ -42,18 +42,16 @@ else:
 MODEL_PATH = "model/model.joblib"
 model = None
 
-@app.on_event("startup")
-def load_model():
-    global model
-    try:
-        if os.path.exists(MODEL_PATH):
-            model = joblib.load(MODEL_PATH)
-            logger.info(f"Modèle chargé depuis {MODEL_PATH}")
-        else:
-            logger.error(f"Fichier modèle introuvable à {MODEL_PATH}")
-    except Exception as e:
-        logger.error(f"Erreur lors du chargement du modèle : {str(e)}")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Logique de démarrage (startup) : chargement du modèle
+    print("Démarrage de l'API...")
+    yield
+    # Logique de fermeture (shutdown) si nécessaire
+    print("Arrêt de l'API...")
+
+app = FastAPI(lifespan=lifespan)
 # 5. Endpoints de l'API
 
 @app.get("/")

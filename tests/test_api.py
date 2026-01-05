@@ -21,7 +21,7 @@ def test_read_root():
     """Test l'endpoint racine /"""
     response = client.get("/")
     assert response.status_code == 200
-    assert response.json()["message"] == "Bank Churn Prediction API"
+    assert response.json()["message"] == "Bienvenue sur l'API de prédiction du Churn Bancaire"
 
 def test_predict_with_mock():
     """Test /predict avec un mock du modèle pour éviter l'erreur 503"""
