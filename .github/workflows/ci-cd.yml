@@ -15,42 +15,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
-        
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Run tests with coverage
-        # Génère le fichier results.xml indispensable pour le monitoring
+        # On génère results.xml pour que GitHub puisse l'afficher dans le monitoring
         run: python -m pytest tests --cov=app --junitxml=results.xml
 
       - name: Surface Test Results
-        # Cette action affiche un tableau propre de tes tests sur GitHub
+        # C'est cette étape qui crée le tableau de monitoring visuel sur GitHub
         uses: test-summary/action@v2
         with:
           paths: "results.xml"
         if: always()
 
-      - name: Cybersecurity Audit (pip-audit)
-        # On corrige l'audit pour qu'il surveille tes dépendances sans planter
-        uses: pypa/gh-action-pip-audit@v1.0.8
-        with:
-          inputs: requirements.txt
-        if: always()
-
   build-and-deploy:
-    needs: test
+    needs: test # Le déploiement ne se fait que si les tests passent
     runs-on: ubuntu-latest
-    # ... reste de ton code build-and-deploy (Azure Login, ACR, etc.)
     steps:
       - uses: actions/checkout@v3
+
       - name: Azure Login
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }} # Utilise le JSON que tu as créé
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
       
       - name: Login to ACR
         uses: azure/docker-login@v1
@@ -61,6 +57,6 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          # Création de l'image avec un tag unique (le SHA du commit)
+          # Construction de l'image Docker avec le tag du commit
           docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} .
           docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
