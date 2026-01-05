@@ -2,17 +2,16 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ] # Se déclenche dès que tu envoies du code sur la branche main
+    branches: [ main ]
 
 env:
-  # Tes noms de ressources vérifiés à l'étape 5
   AZURE_RESOURCE_GROUP: rg-bank-churn-v2
   ACR_NAME: youssefetudiant
   CONTAINER_INSTANCE_NAME: churn-api-instance
   IMAGE_NAME: bank-churn-api
 
 jobs:
-  test: # JOB 1 : Exécuter les tests que tu viens de réussir en local
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -20,17 +19,32 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+          
       - name: Install dependencies
         run: pip install -r requirements.txt
+        
       - name: Run tests with coverage
+        # Génère le fichier results.xml indispensable pour le monitoring
         run: python -m pytest tests --cov=app --junitxml=results.xml
-      - name: surface test results
-        uses: pypa/gh-action-pip-audit@v1.0.0
-        if : always()
 
-  build-and-deploy: # JOB 2 : Construire et envoyer vers Azure
-    needs: test # Ne s'exécute QUE si le job 'test' est vert
+      - name: Surface Test Results
+        # Cette action affiche un tableau propre de tes tests sur GitHub
+        uses: test-summary/action@v2
+        with:
+          paths: "results.xml"
+        if: always()
+
+      - name: Cybersecurity Audit (pip-audit)
+        # On corrige l'audit pour qu'il surveille tes dépendances sans planter
+        uses: pypa/gh-action-pip-audit@v1.0.8
+        with:
+          inputs: requirements.txt
+        if: always()
+
+  build-and-deploy:
+    needs: test
     runs-on: ubuntu-latest
+    # ... reste de ton code build-and-deploy (Azure Login, ACR, etc.)
     steps:
       - uses: actions/checkout@v3
       - name: Azure Login
