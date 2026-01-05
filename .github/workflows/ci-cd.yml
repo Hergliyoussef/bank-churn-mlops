@@ -1,0 +1,49 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ] # Se déclenche dès que tu envoies du code sur la branche main
+
+env:
+  # Tes noms de ressources vérifiés à l'étape 5
+  AZURE_RESOURCE_GROUP: rg-bank-churn-v2
+  ACR_NAME: youssefetudiant
+  CONTAINER_INSTANCE_NAME: churn-api-instance
+  IMAGE_NAME: bank-churn-api
+
+jobs:
+  test: # JOB 1 : Exécuter les tests que tu viens de réussir en local
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+  build-and-deploy: # JOB 2 : Construire et envoyer vers Azure
+    needs: test # Ne s'exécute QUE si le job 'test' est vert
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }} # Utilise le JSON que tu as créé
+      
+      - name: Login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          # Création de l'image avec un tag unique (le SHA du commit)
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
